@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Convofy</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app-container">
+        <!-- Join Screen overlay -->
+        <div id="join-screen" class="glass-panel active">
+            <h2>Welcome to Convofy</h2>
+            <p>Join the conversation right now.</p>
+            <form id="join-form">
+                <input type="text" id="username-input" placeholder="Enter your name" autocomplete="off" required>
+                <button type="submit" class="primary-btn">Join Chat</button>
+            </form>
+        </div>
+
+        <!-- Main Layout with Sidebar -->
+        <div id="main-layout" class="hidden">
+            <!-- Sidebar for Online Users -->
+            <aside class="sidebar glass-panel">
+                <div class="sidebar-header">
+                    <h3>Online Users</h3>
+                    <div class="online-indicator">
+                        <span class="dot"></span><span id="online-count-number">0</span> live
+                    </div>
+                </div>
+                <ul id="active-users-list" class="users-list">
+                    <!-- Users dynamically injected here -->
+                </ul>
+            </aside>
+
+            <!-- Main Chat Interface -->
+            <div id="chat-interface" class="glass-panel">
+                <header class="chat-header">
+                    <div>
+                        <h2>Convofy Room</h2>
+                    </div>
+                    <div class="user-info">
+                       <span id="display-username"></span>
+                       <button id="theme-toggle" class="theme-btn" title="Toggle Theme">🌙</button>
+                    </div>
+                </header>
+
+                <div class="chat-messages-container">
+                    <main class="chat-messages" id="chat-messages">
+                        <!-- Messages dynamically injected here -->
+                    </main>
+
+                    <!-- Typing Indicator -->
+                    <div id="typing-indicator" class="hidden">
+                        <span id="typing-username">Someone</span> is typing
+                        <span class="typing-dots">
+                            <span>.</span><span>.</span><span>.</span>
+                        </span>
+                    </div>
+                </div>
+
+                <footer class="chat-footer">
+                    <form id="chat-form">
+                        <input type="text" id="msg-input" placeholder="Type a message..." autocomplete="off" required>
+                        <button type="submit" class="send-btn">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                                <path d="M3.478 2.404a.75.75 0 0 0-.926.941l2.432 7.905H13.5a.75.75 0 0 1 0 1.5H4.984l-2.432 7.905a.75.75 0 0 0 .926.94 60.519 60.519 0 0 0 18.445-8.986.75.75 0 0 0 0-1.218A60.517 60.517 0 0 0 3.478 2.404Z" />
+                            </svg>
+                        </button>
+                    </form>
+                </footer>
+            </div>
+        </div>
+    </div>
+
+    <!-- Socket.io Script injected by the server -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
