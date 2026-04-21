@@ -11,12 +11,18 @@
     <div id="app-container">
         <!-- Join Screen overlay -->
         <div id="join-screen" class="glass-panel active">
-            <h2>Welcome to Convofy</h2>
-            <p>Join the conversation right now.</p>
+            <h2 id="auth-title">Welcome Back</h2>
+            <p id="auth-subtitle">Login to continue to Convofy.</p>
             <form id="join-form">
-                <input type="text" id="username-input" placeholder="Enter your name" autocomplete="off" required>
-                <button type="submit" class="primary-btn">Join Chat</button>
+                <input type="text" id="username-input" placeholder="Enter your username" autocomplete="off" required>
+                <input type="password" id="password-input" placeholder="Enter your password" autocomplete="off" required>
+                <div id="auth-error" class="error-msg hidden"></div>
+                <button type="submit" id="auth-submit-btn" class="primary-btn">Login</button>
             </form>
+            <div class="auth-toggle">
+                <span id="auth-toggle-text">Don't have an account?</span> 
+                <button id="auth-toggle-btn" class="text-btn">Register</button>
+            </div>
         </div>
 
         <!-- Main Layout with Sidebar -->
@@ -62,7 +68,13 @@
 
                 <footer class="chat-footer">
                     <form id="chat-form">
-                        <input type="text" id="msg-input" placeholder="Type a message..." autocomplete="off" required>
+                        <button type="button" id="attachment-btn" class="icon-btn" title="Attach Photo or Video">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="20" height="20">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M18.375 12.739l-7.693 7.693a4.536 4.536 0 01-6.415-6.414l9.624-9.623a2.268 2.268 0 013.208 3.208l-8.66 8.66a1.134 1.134 0 01-1.604-1.604l7.693-7.694" />
+                            </svg>
+                        </button>
+                        <input type="file" id="media-input" accept="image/*,video/*" class="hidden">
+                        <input type="text" id="msg-input" placeholder="Type a message..." autocomplete="off">
                         <button type="submit" class="send-btn">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
                                 <path d="M3.478 2.404a.75.75 0 0 0-.926.941l2.432 7.905H13.5a.75.75 0 0 1 0 1.5H4.984l-2.432 7.905a.75.75 0 0 0 .926.94 60.519 60.519 0 0 0 18.445-8.986.75.75 0 0 0 0-1.218A60.517 60.517 0 0 0 3.478 2.404Z" />
