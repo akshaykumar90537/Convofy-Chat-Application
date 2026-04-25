@@ -1,7 +1,8 @@
 :root {
     --primary: #6366f1;
+    --primary-glow: rgba(99, 102, 241, 0.5);
     --primary-hover: #4f46e5;
-    --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+    --bg-gradient: #0f172a;
     --panel-bg: rgba(30, 41, 59, 0.7);
     --panel-border: rgba(255, 255, 255, 0.1);
     --text-main: #f8fafc;
@@ -325,10 +326,363 @@ body:not(.light-mode) .status-msg { background: rgba(255, 255, 255, 0.05); }
     border: 1px solid rgba(239, 68, 68, 0.2);
 }
 
+/* Input Context Banner */
+#input-context-banner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(99, 102, 241, 0.1);
+    border: 1px solid var(--primary);
+    border-radius: 12px;
+    padding: 8px 16px;
+    margin-bottom: 12px;
+    font-size: 0.85rem;
+    color: var(--text-main);
+}
+#input-context-banner.hidden { display: none !important; }
+#input-context-text { font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 90%; }
+#cancel-context-btn { width: 24px; height: 24px; min-width: 24px; font-size: 0.8rem; }
+
+/* Mic Button Recording State */
+#mic-btn.recording {
+    background: #ef4444;
+    color: white;
+    border-color: #ef4444;
+    animation: micPulse 1.5s infinite;
+}
+@keyframes micPulse {
+    0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+/* Audio Player in Chat */
+.chat-media-audio { height: 40px; border-radius: 20px; outline: none; max-width: 200px; }
+
+/* Message Actions Menu */
+.message { position: relative; }
+.message-actions {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    gap: 4px;
+    background: var(--panel-bg);
+    padding: 4px 8px;
+    border-radius: 16px;
+    border: 1px solid var(--panel-border);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+    z-index: 5;
+}
+.message:hover .message-actions { opacity: 1; pointer-events: auto; }
+.message.own .message-actions { right: calc(100% + 8px); }
+.message.other .message-actions { left: calc(100% + 8px); }
+
+.action-btn {
+    background: none; border: none; color: var(--text-muted); cursor: pointer;
+    font-size: 1rem; padding: 4px; border-radius: 50%;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+.action-btn:hover { background: rgba(255, 255, 255, 0.1); color: var(--text-main); }
+body.light-mode .action-btn:hover { background: rgba(0, 0, 0, 0.05); }
+
+/* Reply Preview */
+.reply-preview {
+    background: rgba(0, 0, 0, 0.2);
+    border-left: 3px solid var(--primary);
+    padding: 6px 10px;
+    border-radius: 4px 8px 8px 4px;
+    margin-bottom: 6px;
+    font-size: 0.8rem;
+    opacity: 0.8;
+}
+body.light-mode .reply-preview { background: rgba(255, 255, 255, 0.5); border-left: 3px solid var(--primary-hover); }
+.reply-author { font-weight: 600; margin-bottom: 2px; }
+.reply-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+
+/* Reactions */
+.reactions-container {
+    display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px;
+}
+.reaction-badge {
+    background: rgba(0, 0, 0, 0.2);
+    padding: 2px 6px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: transform 0.1s ease;
+}
+.reaction-badge:hover { transform: scale(1.1); }
+.reaction-badge.reacted { background: rgba(99, 102, 241, 0.3); border-color: var(--primary); }
+body.light-mode .reaction-badge { background: rgba(255, 255, 255, 0.5); }
+body.light-mode .reaction-badge.reacted { background: rgba(99, 102, 241, 0.2); }
+
+/* Edit Tag */
+.edited-tag { font-size: 0.65rem; opacity: 0.7; margin-left: 6px; font-style: italic; }
+.deleted-text { font-style: italic; opacity: 0.7; color: #ef4444; }
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
     #main-layout { flex-direction: column; }
     .sidebar { width: 100%; height: 150px; flex: none; border-bottom: 1px solid var(--panel-border); }
     .users-list { display: flex; flex-wrap: wrap; gap: 8px; }
     .users-list li { margin: 0; padding: 6px 12px; }
+    .message-actions { position: relative; top: 0; transform: none; display: flex; opacity: 1; pointer-events: auto; background: transparent; border: none; padding: 0; margin-top: 4px; justify-content: flex-end; }
+    .message.own .message-actions { right: auto; }
+    .message.other .message-actions { left: auto; justify-content: flex-start; }
+}
+
+/* --- Interactive Login GSAP Styles --- */
+body.login-active {
+    background: #0f172a !important;
+    background-image: none !important;
+    color: #f8fafc !important;
+}
+
+/* Animated Background Orbs */
+.orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    z-index: 1; /* Above body but below app-container if possible, or just inside app container */
+    opacity: 0.6;
+    pointer-events: none;
+}
+.orb-1 { width: 400px; height: 400px; background: #6366f1; top: -100px; left: -100px; }
+.orb-2 { width: 300px; height: 300px; background: #8b5cf6; bottom: -50px; right: -50px; }
+.orb-3 { width: 200px; height: 200px; background: #ec4899; top: 40%; left: 60%; }
+
+/* Glassmorphism Card for Login specifically */
+.login-card {
+    background: rgba(30, 41, 59, 0.4);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 24px;
+    padding: 25px 40px 40px 40px;
+    width: 100%;
+    max-width: 400px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    z-index: 10;
+    position: relative;
+    display: none;
+    flex-direction: column;
+    opacity: 0;
+    transform: translateY(30px);
+}
+.login-card.active {
+    display: flex;
+}
+
+.login-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+.login-header h2 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+    background: linear-gradient(to right, #a8a29e, #fff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+.login-header p {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+/* Static Label Inputs */
+.input-group {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 10px;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 14px 16px;
+    background: rgba(15, 23, 42, 0.4);
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    color: var(--text-main);
+    font-size: 1rem;
+    text-align: center; /* Center placeholder and text */
+    outline: none;
+    transition: all 0.3s ease;
+}
+
+.input-group label {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-bottom: 8px;
+    font-weight: 600;
+    text-align: left;
+    padding-left: 8px;
+}
+
+.input-group input:focus {
+    border-color: var(--primary);
+    background: rgba(15, 23, 42, 0.6);
+    box-shadow: 0 0 15px var(--primary-glow);
+}
+
+/* Animated Submit Button */
+.submit-btn {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+}
+
+.submit-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(99, 102, 241, 0.6);
+}
+
+.submit-btn:active {
+    transform: translateY(1px);
+}
+
+.submit-btn::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 5px;
+    height: 5px;
+    background: rgba(255, 255, 255, 0.5);
+    opacity: 0;
+    border-radius: 100%;
+    transform: scale(1, 1) translate(-50%);
+    transform-origin: 50% 50%;
+}
+
+.submit-btn:focus:not(:active)::after {
+    animation: ripple 1s ease-out;
+}
+
+@keyframes ripple {
+    0% { transform: scale(0, 0); opacity: 0.5; }
+    20% { transform: scale(25, 25); opacity: 0.3; }
+    100% { opacity: 0; transform: scale(40, 40); }
+}
+
+/* Toggle Text */
+.toggle-text {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.toggle-btn {
+    background: none;
+    border: none;
+    color: #a78bfa;
+    font-weight: 600;
+    cursor: pointer;
+    transition: color 0.2s ease;
+    font-family: inherit;
+    font-size: inherit;
+    padding-left: 4px;
+}
+.toggle-btn:hover {
+    color: #c4b5fd;
+    text-decoration: underline;
+}
+
+/* Select Input styling */
+.input-group select {
+    width: 100%;
+    padding: 14px 16px;
+    background: rgba(15, 23, 42, 0.4);
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    color: var(--text-main);
+    font-size: 1rem;
+    outline: none;
+    transition: all 0.3s ease;
+    appearance: none;
+}
+.input-group select option {
+    background: #0f172a;
+    color: var(--text-main);
+}
+
+/* Forgot Password Button */
+.forgot-pwd-wrapper {
+    text-align: right;
+    margin-top: -10px;
+    margin-bottom: 20px;
+}
+.text-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+.text-btn:hover {
+    color: #a78bfa;
+}
+
+/* Modal Styling */
+.modal {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+.modal.hidden {
+    display: none !important;
+}
+.modal-content {
+    background: rgba(30, 41, 59, 0.95);
+    padding: 30px;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 400px;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+.modal-header h3 {
+    margin: 0;
+    color: var(--text-main);
+}
+.icon-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.5rem;
+    cursor: pointer;
+}
+.icon-btn:hover {
+    color: var(--text-main);
+}
+.modal-desc {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-bottom: 20px;
+    text-align: center;
 }

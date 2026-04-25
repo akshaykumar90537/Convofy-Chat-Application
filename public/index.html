@@ -4,27 +4,93 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Convofy</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
     <div id="app-container">
+        <!-- Background Animated Orbs (only visible during login) -->
+        <div class="orb orb-1" id="orb-1"></div>
+        <div class="orb orb-2" id="orb-2"></div>
+        <div class="orb orb-3" id="orb-3"></div>
+
         <!-- Join Screen overlay -->
-        <div id="join-screen" class="glass-panel active">
-            <h2 id="auth-title">Welcome Back</h2>
-            <p id="auth-subtitle">Login to continue to Convofy.</p>
+        <div id="join-screen" class="login-card active">
+            <div class="login-header">
+                <h2 id="auth-title">Welcome Back</h2>
+                <p id="auth-subtitle">Login to continue to Convofy.</p>
+            </div>
             <form id="join-form">
-                <input type="text" id="username-input" placeholder="Enter your username" autocomplete="off" required>
-                <input type="password" id="password-input" placeholder="Enter your password" autocomplete="off" required>
+                <div class="input-group">
+                    <label for="username-input">Username</label>
+                    <input type="text" id="username-input" placeholder="Enter username" autocomplete="off" required>
+                </div>
+                <div class="input-group">
+                    <label for="password-input">Password</label>
+                    <input type="password" id="password-input" placeholder="Enter password" autocomplete="off" required>
+                </div>
+                
+                <div id="register-fields" style="display: none;">
+                    <div class="input-group">
+                        <label for="security-question">Security Question</label>
+                        <select id="security-question" required>
+                            <option value="What is your pet name?">What is your pet name?</option>
+                            <option value="What is your favorite color?">What is your favorite color?</option>
+                            <option value="What is your mother's maiden name?">What is your mother's maiden name?</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="security-answer">Answer</label>
+                        <input type="text" id="security-answer" placeholder="Enter answer" autocomplete="off" required>
+                    </div>
+                </div>
+
+                <div class="forgot-pwd-wrapper">
+                    <button type="button" id="forgot-btn" class="text-btn">Forgot Password?</button>
+                </div>
                 <div id="auth-error" class="error-msg hidden"></div>
-                <button type="submit" id="auth-submit-btn" class="primary-btn">Login</button>
+                <button type="submit" id="auth-submit-btn" class="submit-btn">Login</button>
             </form>
-            <div class="auth-toggle">
+            <div class="auth-toggle toggle-text">
                 <span id="auth-toggle-text">Don't have an account?</span> 
-                <button id="auth-toggle-btn" class="text-btn">Register</button>
+                <button id="auth-toggle-btn" class="toggle-btn" type="button">Register</button>
             </div>
         </div>
 
+        <!-- Forgot Password Modal -->
+        <div id="forgot-modal" class="modal hidden">
+            <div class="modal-content glass-panel">
+                <div class="modal-header">
+                    <h3>Reset Password</h3>
+                    <button id="close-forgot-btn" class="icon-btn">&times;</button>
+                </div>
+                
+                <div id="forgot-step-1">
+                    <p class="modal-desc">Enter your username to find your account.</p>
+                    <div class="input-group">
+                        <label>Username</label>
+                        <input type="text" id="forgot-username" placeholder="Username" autocomplete="off">
+                    </div>
+                    <div id="forgot-error-1" class="error-msg hidden"></div>
+                    <button id="forgot-next-btn" class="submit-btn">Next</button>
+                </div>
+
+                <div id="forgot-step-2" class="hidden">
+                    <p class="modal-desc" id="display-security-question">Question goes here...</p>
+                    <div class="input-group">
+                        <label>Answer</label>
+                        <input type="text" id="forgot-answer" placeholder="Your Answer" autocomplete="off">
+                    </div>
+                    <div class="input-group">
+                        <label>New Password</label>
+                        <input type="password" id="forgot-new-password" placeholder="New Password" autocomplete="off">
+                    </div>
+                    <div id="forgot-error-2" class="error-msg hidden"></div>
+                    <button id="forgot-reset-btn" class="submit-btn">Reset Password</button>
+                </div>
+            </div>
+        </div>
         <!-- Main Layout with Sidebar -->
         <div id="main-layout" class="hidden">
             <!-- Sidebar for Online Users -->
@@ -67,10 +133,19 @@
                 </div>
 
                 <footer class="chat-footer">
+                    <div id="input-context-banner" class="hidden">
+                        <span id="input-context-text"></span>
+                        <button id="cancel-context-btn" class="icon-btn" title="Cancel">✕</button>
+                    </div>
                     <form id="chat-form">
                         <button type="button" id="attachment-btn" class="icon-btn" title="Attach Photo or Video">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="20" height="20">
                               <path stroke-linecap="round" stroke-linejoin="round" d="M18.375 12.739l-7.693 7.693a4.536 4.536 0 01-6.415-6.414l9.624-9.623a2.268 2.268 0 013.208 3.208l-8.66 8.66a1.134 1.134 0 01-1.604-1.604l7.693-7.694" />
+                            </svg>
+                        </button>
+                        <button type="button" id="mic-btn" class="icon-btn" title="Hold to Record Audio">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="20" height="20">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
                             </svg>
                         </button>
                         <input type="file" id="media-input" accept="image/*,video/*" class="hidden">
@@ -88,6 +163,6 @@
 
     <!-- Socket.io Script injected by the server -->
     <script src="/socket.io/socket.io.js"></script>
-    <script src="script.js"></script>
+    <script src="script.js?v=3"></script>
 </body>
 </html>

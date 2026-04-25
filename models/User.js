@@ -12,6 +12,15 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: true,
         minlength: 6
+    },
+    securityQuestion: {
+        type: String,
+        required: true,
+        default: 'What is your pet name?'
+    },
+    securityAnswer: {
+        type: String,
+        required: true
     }
 }, { timestamps: true });
 
