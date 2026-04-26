@@ -117,31 +117,122 @@ authToggleBtn.addEventListener('click', () => {
     });
 });
 
-// New UI Elements
-const activeUsersList = document.getElementById('active-users-list');
-const onlineCountNumber = document.getElementById('online-count-number');
 const typingIndicator = document.getElementById('typing-indicator');
 const typingUsername = document.getElementById('typing-username');
 const themeToggle = document.getElementById('theme-toggle');
+
+const conversationsList = document.getElementById('conversations-list');
+const chatTitle = document.getElementById('chat-title');
+const groupAdminBtn = document.getElementById('group-admin-btn');
+const createGroupModal = document.getElementById('create-group-modal');
+const closeCreateGroupBtn = document.getElementById('close-create-group-btn');
+const showCreateGroupBtn = document.getElementById('show-create-group-btn');
+const newGroupName = document.getElementById('new-group-name');
+const groupUsersSelect = document.getElementById('group-users-select');
+const createGroupSubmit = document.getElementById('create-group-submit');
+const adminModal = document.getElementById('admin-modal');
+const closeAdminBtn = document.getElementById('close-admin-btn');
+const adminRenameInput = document.getElementById('admin-rename-input');
+const adminRenameBtn = document.getElementById('admin-rename-btn');
+const adminMembersList = document.getElementById('admin-members-list');
+const adminAddUserSearch = document.getElementById('admin-add-user-search');
+const adminAddUserList = document.getElementById('admin-add-user-list');
+const adminAddUserBtn = document.getElementById('admin-add-user-btn');
+const sidebarToggleBtn = document.getElementById('sidebar-toggle-btn');
+const sidebar = document.querySelector('.sidebar');
+
+if (sidebarToggleBtn && sidebar) {
+    sidebarToggleBtn.addEventListener('click', () => {
+        sidebar.classList.toggle('collapsed');
+    });
+}
+
+let currentEligibleUsers = [];
+let selectedUserToAdd = null;
+
+if (adminAddUserSearch) {
+    adminAddUserSearch.addEventListener('input', (e) => {
+        const val = e.target.value.toLowerCase();
+        adminAddUserList.innerHTML = '';
+        const filtered = currentEligibleUsers.filter(u => u.toLowerCase().includes(val));
+        if(filtered.length === 0) {
+            adminAddUserList.innerHTML = '<li style="color: #94a3b8; cursor: default;">No users found</li>';
+        } else {
+            filtered.forEach(u => {
+                const li = document.createElement('li');
+                li.textContent = u;
+                if(u === selectedUserToAdd) li.classList.add('selected');
+                li.addEventListener('click', () => {
+                    selectedUserToAdd = u;
+                    adminAddUserSearch.value = u;
+                    adminAddUserList.classList.add('hidden');
+                    Array.from(adminAddUserList.children).forEach(child => child.classList.remove('selected'));
+                    li.classList.add('selected');
+                });
+                adminAddUserList.appendChild(li);
+            });
+        }
+    });
+
+    adminAddUserSearch.addEventListener('focus', () => {
+        adminAddUserList.classList.remove('hidden');
+        adminAddUserSearch.dispatchEvent(new Event('input'));
+    });
+
+    document.addEventListener('click', (e) => {
+        if(!e.target.closest('#admin-add-user-dropdown')) {
+            if(adminAddUserList && !adminAddUserList.classList.contains('hidden')) {
+                adminAddUserList.classList.add('hidden');
+            }
+        }
+    });
+}
+const adminGroupNameDisplay = document.getElementById('admin-group-name-display');
+
+const themeIcon = document.getElementById('theme-icon');
+const topRightMenuBtn = document.getElementById('top-right-menu-btn');
+const topRightDropdown = document.getElementById('top-right-dropdown');
 
 // Handle Theme Initialization
 const savedTheme = localStorage.getItem('chat-theme') || 'dark';
 if (savedTheme === 'light') {
     document.body.classList.add('light-mode');
-    themeToggle.textContent = '☀️';
+    if(themeIcon) themeIcon.textContent = '☀️';
 } else {
-    themeToggle.textContent = '🌙';
+    if(themeIcon) themeIcon.textContent = '🌙';
 }
 
 // Handle Theme Toggle
-themeToggle.addEventListener('click', () => {
-    document.body.classList.toggle('light-mode');
-    const isLight = document.body.classList.contains('light-mode');
-    localStorage.setItem('chat-theme', isLight ? 'light' : 'dark');
-    themeToggle.textContent = isLight ? '☀️' : '🌙';
-});
+if(themeToggle) {
+    themeToggle.addEventListener('click', () => {
+        document.body.classList.toggle('light-mode');
+        const isLight = document.body.classList.contains('light-mode');
+        localStorage.setItem('chat-theme', isLight ? 'light' : 'dark');
+        if(themeIcon) themeIcon.textContent = isLight ? '☀️' : '🌙';
+        // Close dropdown
+        if(topRightDropdown) topRightDropdown.classList.add('hidden');
+    });
+}
+
+// Handle Dropdown Toggle
+if(topRightMenuBtn && topRightDropdown) {
+    topRightMenuBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        topRightDropdown.classList.toggle('hidden');
+    });
+
+    // Close when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!topRightDropdown.contains(e.target) && !topRightMenuBtn.contains(e.target)) {
+            topRightDropdown.classList.add('hidden');
+        }
+    });
+}
 
 let currentUsername = 'Anonymous';
+let currentConversationId = null;
+let allUsers = [];
+let allConversations = [];
 let typingTimer;
 const TYPING_TIMEOUT = 1500; // ms to clear typing
 let isTyping = false;
@@ -185,45 +276,84 @@ joinForm.addEventListener('submit', async (e) => {
         }
 
         currentUsername = data.username;
+        localStorage.setItem('auth_token', data.token);
         authError.classList.add('hidden');
         
-        // Connect Socket
-        socket.connect();
-        
-        // Switch screens with GSAP transition
-        gsap.to("#join-screen", {
-            y: -50,
-            opacity: 0,
-            scale: 0.9,
-            duration: 0.5,
-            ease: "power2.in",
-            onComplete: () => {
-                joinScreen.classList.remove('active');
-                joinScreen.style.display = 'none';
-                
-                // Hide orbs
-                document.querySelectorAll('.orb').forEach(orb => orb.style.display = 'none');
-                
-                // Remove login-active class
-                document.body.classList.remove('login-active');
-                
-                mainLayout.classList.remove('hidden');
-                
-                gsap.fromTo("#main-layout", 
-                    { opacity: 0, y: 20 },
-                    { opacity: 1, y: 0, duration: 0.6, ease: "power3.out", onStart: () => { mainLayout.classList.add('active'); } }
-                );
-            }
-        });
-
-        displayUsername.textContent = currentUsername;
-        socket.emit('joinChat', currentUsername);
+        transitionToChat();
         
     } catch (err) {
         console.error('Auth error:', err);
         showError('Could not connect to server. Please try again.');
     }
 });
+
+function transitionToChat() {
+    // Connect Socket
+    socket.connect();
+    
+    // Switch screens with GSAP transition
+    gsap.to("#join-screen", {
+        y: -50,
+        opacity: 0,
+        scale: 0.9,
+        duration: 0.5,
+        ease: "power2.in",
+        onComplete: () => {
+            joinScreen.classList.remove('active');
+            joinScreen.style.display = 'none';
+            
+            // Hide orbs
+            document.querySelectorAll('.orb').forEach(orb => orb.style.display = 'none');
+            
+            // Remove login-active class
+            document.body.classList.remove('login-active');
+            
+            mainLayout.classList.remove('hidden');
+            
+            gsap.fromTo("#main-layout", 
+                { opacity: 0, y: 20 },
+                { opacity: 1, y: 0, duration: 0.6, ease: "power3.out", onStart: () => { mainLayout.classList.add('active'); } }
+            );
+        }
+    });
+
+    displayUsername.textContent = currentUsername;
+    socket.emit('joinChat', currentUsername);
+    loadData();
+}
+
+function verifyTokenOnLoad() {
+    const token = localStorage.getItem('auth_token');
+    if (!token) return;
+
+    fetch('/api/verify', {
+        headers: { 'Authorization': `Bearer ${token}` }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.username) {
+            currentUsername = data.username;
+            transitionToChat();
+        } else {
+            localStorage.removeItem('auth_token');
+        }
+    })
+    .catch(err => {
+        console.error('Verification error:', err);
+        localStorage.removeItem('auth_token');
+    });
+}
+
+// Check auth token on startup
+document.addEventListener('DOMContentLoaded', verifyTokenOnLoad);
+
+const logoutBtn = document.getElementById('logout-btn');
+if (logoutBtn) {
+    logoutBtn.addEventListener('click', () => {
+        localStorage.removeItem('auth_token');
+        window.location.reload();
+    });
+}
 
 function showError(msg) {
     authError.textContent = msg;
@@ -252,7 +382,8 @@ chatForm.addEventListener('submit', (e) => {
         socket.emit('editMessage', { messageId: editingMessageId, newText: msg });
         clearContext();
     } else {
-        const payload = { text: msg, mediaUrl: null, mediaType: null };
+        if(!currentConversationId) return alert('Select a conversation first');
+        const payload = { text: msg, mediaUrl: null, mediaType: null, conversationId: currentConversationId };
         if (replyingToId) {
             const replyMsg = document.getElementById(`msg-${replyingToId}`);
             if (replyMsg) {
@@ -308,7 +439,8 @@ mediaInput.addEventListener('change', async () => {
         socket.emit('chatMessage', {
             text: '',
             mediaUrl: data.mediaUrl,
-            mediaType: data.mediaType
+            mediaType: data.mediaType,
+            conversationId: currentConversationId
         });
         
     } catch(err) {
@@ -354,7 +486,8 @@ micBtn.addEventListener('click', async () => {
                     socket.emit('chatMessage', {
                         text: '',
                         mediaUrl: data.mediaUrl,
-                        mediaType: 'audio'
+                        mediaType: 'audio',
+                        conversationId: currentConversationId
                     });
                 } else {
                     alert(data.error || 'Failed to upload voice note');
@@ -382,37 +515,29 @@ msgInput.addEventListener('input', () => {
         clearTimeout(typingTimer);
         if(isTyping) {
             isTyping = false;
-            socket.emit('stopTyping');
+            socket.emit('stopTyping', currentConversationId);
         }
         return;
     }
 
     if (!isTyping) {
         isTyping = true;
-        socket.emit('typing');
+        socket.emit('typing', currentConversationId);
     }
 
     clearTimeout(typingTimer);
     typingTimer = setTimeout(() => {
         isTyping = false;
-        socket.emit('stopTyping');
+        socket.emit('stopTyping', currentConversationId);
     }, TYPING_TIMEOUT);
 });
 
 // Handle Incoming Active Users update
 socket.on('activeUsers', (data) => {
-    onlineCountNumber.textContent = data.count;
-    
-    activeUsersList.innerHTML = '';
-    data.users.forEach(user => {
-        const li = document.createElement('li');
-        li.textContent = user;
-        if (user === currentUsername) {
-            li.classList.add('me');
-            li.textContent += ' (You)';
-        }
-        activeUsersList.appendChild(li);
-    });
+    const countElement = document.getElementById('header-online-count');
+    if (countElement) {
+        countElement.textContent = `(${data.count} online)`;
+    }
 });
 
 // Handle Incoming Typing Status
@@ -439,37 +564,266 @@ function updateTypingUI() {
     }
 }
 
-// Load message history
-socket.on('loadMessages', (messages) => {
+// Data Loading & Conversations
+async function loadData() {
+    try {
+        const [usersRes, convosRes] = await Promise.all([
+            fetch('/api/users'),
+            fetch(`/api/conversations/${currentUsername}`)
+        ]);
+        const users = await usersRes.json();
+        allUsers = users.map(u => u.username);
+        
+        allConversations = await convosRes.json();
+        renderConversations();
+        
+        if(allConversations.length > 0 && !currentConversationId) {
+            const global = allConversations.find(c => c.isGlobal);
+            switchConversation(global ? global._id : allConversations[0]._id);
+        }
+    } catch(err) { console.error('Error loading data', err); }
+}
+
+function renderConversations() {
+    conversationsList.innerHTML = '';
+    allConversations.forEach(c => {
+        const li = document.createElement('li');
+        li.style.cursor = 'pointer';
+        let name = c.name;
+        if(!c.isGroup) {
+            name = c.participants.find(p => p !== currentUsername) || 'Self Chat';
+        }
+        
+        // Generate Avatar color based on name
+        const colors = ['#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899', '#ef4444'];
+        const charCode = name.charCodeAt(0) || 0;
+        const color = colors[charCode % colors.length];
+        
+        const avatar = document.createElement('div');
+        avatar.className = 'convo-avatar';
+        avatar.style.background = color;
+        avatar.textContent = name.charAt(0).toUpperCase();
+        
+        const textSpan = document.createElement('span');
+        textSpan.textContent = name;
+        
+        li.appendChild(avatar);
+        li.appendChild(textSpan);
+        
+        if(c._id === currentConversationId) {
+            li.classList.add('active-chat');
+        }
+        li.addEventListener('click', () => switchConversation(c._id));
+        conversationsList.appendChild(li);
+    });
+}
+
+window.switchConversation = async (id) => {
+    currentConversationId = id;
+    renderConversations();
     chatMessages.innerHTML = '';
-    messages.forEach(renderMessage);
-    scrollToBottom();
+    
+    const convo = allConversations.find(c => c._id === id);
+    if(convo) {
+        let name = convo.name;
+        if(!convo.isGroup) name = convo.participants.find(p => p !== currentUsername) || 'Self Chat';
+        chatTitle.textContent = name;
+        
+        // Update header avatar
+        const headerAvatar = document.getElementById('header-user-avatar');
+        if (headerAvatar) {
+            const colors = ['#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899', '#ef4444'];
+            const charCode = name.charCodeAt(0) || 0;
+            const color = colors[charCode % colors.length];
+            headerAvatar.style.background = color;
+            headerAvatar.textContent = name.charAt(0).toUpperCase();
+        }
+        
+        if(convo.isGroup && convo.admin === currentUsername && !convo.isGlobal) {
+            groupAdminBtn.classList.remove('hidden');
+        } else {
+            groupAdminBtn.classList.add('hidden');
+        }
+    }
+
+    try {
+        const res = await fetch(`/api/messages/${id}`);
+        const messages = await res.json();
+        messages.forEach(renderMessage);
+        scrollToBottom();
+        
+        // Mark as read
+        const unread = messages.filter(m => m.authorUsername !== currentUsername && (!m.readBy || !m.readBy.includes(currentUsername))).map(m => m._id);
+        if(unread.length > 0) {
+            socket.emit('markAsRead', { conversationId: id, messageIds: unread });
+        }
+    } catch(err) { console.error('Error fetching messages', err); }
+};
+
+// Modal Events
+showCreateGroupBtn.addEventListener('click', () => {
+    createGroupModal.classList.remove('hidden');
+    newGroupName.value = '';
+    groupUsersSelect.innerHTML = '';
+    allUsers.forEach(u => {
+        if(u !== currentUsername) {
+            groupUsersSelect.innerHTML += `<label><input type="checkbox" value="${u}"> ${u}</label>`;
+        }
+    });
 });
+closeCreateGroupBtn.addEventListener('click', () => createGroupModal.classList.add('hidden'));
+
+createGroupSubmit.addEventListener('click', () => {
+    const name = newGroupName.value.trim();
+    if(!name) return alert('Enter group name');
+    const checked = Array.from(groupUsersSelect.querySelectorAll('input:checked')).map(cb => cb.value);
+    if(checked.length === 0) return alert('Select at least one member');
+    socket.emit('createGroup', { name, participants: checked });
+    createGroupModal.classList.add('hidden');
+});
+
+groupAdminBtn.addEventListener('click', () => {
+    adminModal.classList.remove('hidden');
+    const convo = allConversations.find(c => c._id === currentConversationId);
+    if(!convo) return;
+    
+    const currentName = convo.name || 'Group';
+    adminGroupNameDisplay.textContent = currentName;
+    adminRenameInput.value = currentName;
+    
+    adminMembersList.innerHTML = '';
+    convo.participants.forEach(p => {
+        const firstLetter = p.charAt(0).toUpperCase();
+        let actionHtml = '';
+        if (p === convo.admin) {
+             actionHtml = `<span class="badge-admin">🛡️ Admin</span>`;
+        } else {
+             actionHtml = `<button class="badge-kick-btn" onclick="kickUser('${p}')">🚫 Kick</button>`;
+        }
+        
+        const hash = [...p].reduce((acc, char) => acc + char.charCodeAt(0), 0);
+        const hue = hash % 360;
+        const gradient = `linear-gradient(135deg, hsl(${hue}, 70%, 60%), hsl(${(hue + 40) % 360}, 70%, 50%))`;
+
+        let html = `
+            <li>
+                <div class="member-avatar-info">
+                    <div class="member-avatar" style="background: ${gradient}">${firstLetter}</div>
+                    <span class="member-name">${p}</span>
+                </div>
+                ${actionHtml}
+            </li>
+        `;
+        adminMembersList.innerHTML += html;
+    });
+
+    currentEligibleUsers = allUsers.filter(u => !convo.participants.includes(u));
+    selectedUserToAdd = null;
+    adminAddUserSearch.value = '';
+    adminAddUserList.classList.add('hidden');
+});
+closeAdminBtn.addEventListener('click', () => adminModal.classList.add('hidden'));
+
+adminRenameBtn.addEventListener('click', () => {
+    const newName = adminRenameInput.value.trim();
+    if(newName) socket.emit('adminAction', { action: 'rename', conversationId: currentConversationId, newName });
+});
+adminAddUserBtn.addEventListener('click', () => {
+    const targetUser = selectedUserToAdd || adminAddUserSearch.value.trim();
+    if(targetUser) {
+        socket.emit('adminAction', { action: 'add', conversationId: currentConversationId, targetUser });
+        adminAddUserSearch.value = '';
+        selectedUserToAdd = null;
+    }
+});
+window.kickUser = (user) => {
+    if(confirm(`Kick ${user}?`)) socket.emit('adminAction', { action: 'kick', conversationId: currentConversationId, targetUser: user });
+};
+window.startPrivateChat = (user) => {
+    socket.emit('startPrivateChat', { targetUsername: user });
+    tabChats.click();
+};
+
+socket.on('conversationCreated', (convo) => {
+    if(convo.participants.includes(currentUsername) || convo.isGlobal) {
+        const exists = allConversations.find(c => c._id === convo._id);
+        if(!exists) {
+            allConversations.push(convo);
+            renderConversations();
+        }
+        if(!currentConversationId) switchConversation(convo._id);
+    }
+});
+socket.on('participantAdded', () => loadData());
+socket.on('participantRemoved', () => loadData());
+socket.on('groupRenamed', () => loadData());
 
 // Handle Incoming Messages
 socket.on('chatMessage', (data) => {
-    renderMessage(data);
-    scrollToBottom();
+    if(data.conversationId === currentConversationId) {
+        renderMessage(data);
+        scrollToBottom();
+        if(data.authorUsername !== currentUsername) {
+            socket.emit('markAsRead', { conversationId: data.conversationId, messageIds: [data._id] });
+        }
+    } else {
+        // notification logic could go here
+    }
+});
+
+socket.on('messagesRead', ({ conversationId, messageIds, readBy }) => {
+    if(conversationId !== currentConversationId) return;
+    messageIds.forEach(id => {
+        const msgEl = document.getElementById(`msg-${id}`);
+        if(msgEl) {
+            const receiptSpan = msgEl.querySelector('.read-receipts');
+            if(receiptSpan) {
+                receiptSpan.classList.remove('sent');
+                receiptSpan.classList.add('read');
+                receiptSpan.textContent = '✓✓';
+            }
+        }
+    });
 });
 
 function renderMessage(data) {
-    const isOwn = data.authorId === socket.id;
+    const isOwn = data.authorId === socket.id || data.authorUsername === currentUsername;
     const timestamp = data.createdAt || data.timestamp || new Date();
     const time = new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     
+    if(data.isSystem) {
+        const statusEl = document.createElement('div');
+        statusEl.classList.add('status-msg');
+        statusEl.textContent = data.text;
+        chatMessages.appendChild(statusEl);
+        return;
+    }
+
     let messageEl = document.getElementById(`msg-${data._id}`);
     if (!messageEl) {
         messageEl = document.createElement('div');
         messageEl.id = `msg-${data._id}`;
-        messageEl.classList.add('message');
+        messageEl.classList.add('message-wrapper');
         messageEl.classList.add(isOwn ? 'own' : 'other');
         chatMessages.appendChild(messageEl);
     }
 
     let innerHtml = '';
+    
+    const authorName = data.authorUsername || data.username || 'Unknown';
+    const firstLetter = authorName.charAt(0).toUpperCase();
+    const colors = ['#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899', '#ef4444'];
+    const charCode = authorName.charCodeAt(0) || 0;
+    const color = colors[charCode % colors.length];
 
     if (!isOwn) {
-        innerHtml += `<div class="meta">${escapeHTML(data.authorUsername || data.username || 'Unknown')}</div>`;
+        innerHtml += `<div class="msg-avatar" style="background: ${color}">${firstLetter}</div>`;
+    }
+
+    innerHtml += `<div class="message ${isOwn ? 'own' : 'other'}">`;
+
+    if (!isOwn) {
+        innerHtml += `<div class="meta">${escapeHTML(authorName)}</div>`;
     }
 
     innerHtml += `<div class="bubble">`;
@@ -506,7 +860,15 @@ function renderMessage(data) {
     }
 
     innerHtml += `</div>`; // end bubble
-    innerHtml += `<div class="time">${time}</div>`;
+    
+    // Read Receipts logic
+    const isRead = data.readBy && data.readBy.length > 1;
+    let readReceiptsHtml = '';
+    if(isOwn) {
+        readReceiptsHtml = `<span class="read-receipts ${isRead ? 'read' : 'sent'}">${isRead ? '✓✓' : '✓'}</span>`;
+    }
+    
+    innerHtml += `<div class="time">${time}${readReceiptsHtml}</div>`;
 
     // Actions Menu
     if (!data.isDeleted) {
@@ -533,6 +895,8 @@ function renderMessage(data) {
         }
         innerHtml += `</div>`;
     }
+    
+    innerHtml += `</div>`; // Close .message wrapper
 
     messageEl.innerHTML = innerHtml;
 }
@@ -731,3 +1095,32 @@ forgotResetBtn.addEventListener('click', async () => {
         forgotError2.classList.remove('hidden');
     }
 });
+
+
+// --- Emoji Picker Logic --- 
+const emojiBtn = document.getElementById('emoji-btn');
+const emojiPickerWrapper = document.getElementById('emoji-picker-wrapper');
+const emojiPicker = document.querySelector('emoji-picker');
+
+if (emojiBtn && emojiPickerWrapper && emojiPicker) {
+    emojiBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        emojiPickerWrapper.classList.toggle('hidden');
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!emojiPickerWrapper.contains(e.target) && !emojiBtn.contains(e.target)) {
+            emojiPickerWrapper.classList.add('hidden');
+        }
+    });
+
+    emojiPicker.addEventListener('emoji-click', event => {
+        const input = document.getElementById('msg-input');
+        const cursorPosition = input.selectionStart;
+        const textBefore = input.value.substring(0, cursorPosition);
+        const textAfter  = input.value.substring(cursorPosition, input.value.length);
+        input.value = textBefore + event.detail.unicode + textAfter;
+        input.selectionStart = input.selectionEnd = cursorPosition + event.detail.unicode.length;
+        input.focus();
+    });
+}

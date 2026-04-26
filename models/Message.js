@@ -42,6 +42,15 @@ const messageSchema = new mongoose.Schema({
         type: Map,
         of: [String], // Array of usernames
         default: {}
+    },
+    conversationId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Conversation',
+        required: true
+    },
+    readBy: {
+        type: [String], // Array of usernames who read the message
+        default: []
     }
 }, { timestamps: true });
 

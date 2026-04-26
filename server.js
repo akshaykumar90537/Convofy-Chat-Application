@@ -4,11 +4,15 @@ const http = require('http');
 const { Server } = require('socket.io');
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+
+const JWT_SECRET = process.env.JWT_SECRET || 'convofy-super-secret-key';
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const User = require('./models/User');
 const Message = require('./models/Message');
+const Conversation = require('./models/Conversation');
 
 // Setup for uploads directory
 const uploadsDir = path.join(__dirname, 'public', 'uploads');
@@ -41,10 +45,23 @@ app.use(express.json()); // To parse JSON request bodies
 // Serve static files from the "public" directory
 app.use(express.static('public'));
 
+let globalChatId = null;
+async function initGlobalChat() {
+    let globalChat = await Conversation.findOne({ isGlobal: true });
+    if (!globalChat) {
+        globalChat = new Conversation({ isGroup: true, isGlobal: true, name: 'Convofy Global' });
+        await globalChat.save();
+    }
+    globalChatId = globalChat._id.toString();
+}
+
 // Connect to MongoDB
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/convofy';
 mongoose.connect(MONGO_URI)
-    .then(() => console.log('Connected to MongoDB'))
+    .then(async () => {
+        console.log('Connected to MongoDB');
+        await initGlobalChat();
+    })
     .catch((err) => console.error('MongoDB connection error:', err));
 
 // Keep track of active users mapping socket.id -> username
@@ -58,6 +75,31 @@ function broadcastActiveUsers() {
         users: usersList
     });
 }
+
+// REST API Endpoints for Authentication & Data
+
+app.get('/api/users', async (req, res) => {
+    try {
+        const users = await User.find({}, 'username');
+        res.json(users);
+    } catch(err) { res.status(500).json({error: 'Server error'}); }
+});
+
+app.get('/api/conversations/:username', async (req, res) => {
+    try {
+        const convos = await Conversation.find({
+            $or: [{ participants: req.params.username }, { isGlobal: true }]
+        });
+        res.json(convos);
+    } catch(err) { res.status(500).json({error: 'Server error'}); }
+});
+
+app.get('/api/messages/:conversationId', async (req, res) => {
+    try {
+        const messages = await Message.find({ conversationId: req.params.conversationId }).sort({ createdAt: 1 });
+        res.json(messages);
+    } catch(err) { res.status(500).json({error: 'Server error'}); }
+});
 
 // REST API Endpoints for Authentication
 
@@ -74,9 +116,8 @@ app.post('/api/register', async (req, res) => {
             return res.status(400).json({ error: 'Username must be at least 3 characters long' });
         }
 
-        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).+$/;
-        if (!passwordRegex.test(password)) {
-            return res.status(400).json({ error: 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one symbol' });
+        if (password.length < 6) {
+            return res.status(400).json({ error: 'Password must be at least 6 characters long' });
         }
 
         const existingUser = await User.findOne({ username });
@@ -99,7 +140,10 @@ app.post('/api/register', async (req, res) => {
         });
 
         await newUser.save();
-        res.status(201).json({ message: 'User registered successfully', username });
+        
+        const token = jwt.sign({ username: newUser.username }, JWT_SECRET, { expiresIn: '7d' });
+        
+        res.status(201).json({ message: 'User registered successfully', username, token });
     } catch (error) {
         console.error('Registration error:', error);
         res.status(500).json({ error: 'Server error during registration' });
@@ -125,12 +169,26 @@ app.post('/api/login', async (req, res) => {
             return res.status(401).json({ error: 'Invalid username or password' });
         }
 
-        // Keep it simple: on success, client can proceed to connect socket
-        res.status(200).json({ message: 'Login successful', username: user.username });
+        const token = jwt.sign({ username: user.username }, JWT_SECRET, { expiresIn: '7d' });
+
+        res.status(200).json({ message: 'Login successful', username: user.username, token });
     } catch (error) {
         console.error('Login error:', error);
         res.status(500).json({ error: 'Server error during login' });
     }
+});
+
+// Verify Token (Auto-login)
+app.get('/api/verify', (req, res) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    
+    if (!token) return res.status(401).json({ error: 'No token provided' });
+
+    jwt.verify(token, JWT_SECRET, (err, user) => {
+        if (err) return res.status(403).json({ error: 'Invalid token' });
+        res.status(200).json({ username: user.username });
+    });
 });
 
 // Forgot Password - Get Question
@@ -165,9 +223,8 @@ app.post('/api/forgot-password-reset', async (req, res) => {
             return res.status(400).json({ error: 'All fields are required' });
         }
 
-        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).+$/;
-        if (!passwordRegex.test(newPassword)) {
-            return res.status(400).json({ error: 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one symbol' });
+        if (newPassword.length < 6) {
+            return res.status(400).json({ error: 'Password must be at least 6 characters long' });
         }
 
         const user = await User.findOne({ username });
@@ -235,13 +292,92 @@ io.on('connection', (socket) => {
             timestamp: new Date().toISOString(),
         });
 
-        // Fetch past messages
+        // Join global chat by default
+        if (globalChatId) socket.join(globalChatId);
+        
+        // Fetch and join user's conversations
         try {
-            const messages = await Message.find().sort({ createdAt: 1 }).limit(100);
-            socket.emit('loadMessages', messages);
-        } catch (err) {
-            console.error('Error fetching messages:', err);
-        }
+            const convos = await Conversation.find({ participants: socket.username });
+            convos.forEach(c => socket.join(c._id.toString()));
+        } catch (err) {}
+    });
+
+    // Admin Actions
+    socket.on('adminAction', async ({ action, conversationId, targetUser, newName }) => {
+        try {
+            const convo = await Conversation.findById(conversationId);
+            if (!convo || convo.admin !== socket.username) return;
+            
+            if (action === 'kick') {
+                convo.participants = convo.participants.filter(p => p !== targetUser);
+                await convo.save();
+                io.to(conversationId).emit('participantRemoved', { conversationId, targetUser });
+                io.to(conversationId).emit('chatMessage', {
+                    _id: Date.now().toString(),
+                    conversationId,
+                    text: `${targetUser} was removed from the group by admin.`,
+                    authorUsername: 'System',
+                    isSystem: true
+                });
+            } else if (action === 'add') {
+                if (!convo.participants.includes(targetUser)) {
+                    convo.participants.push(targetUser);
+                    await convo.save();
+                    io.to(conversationId).emit('participantAdded', { conversationId, targetUser });
+                    io.to(conversationId).emit('chatMessage', {
+                        _id: Date.now().toString(),
+                        conversationId,
+                        text: `${targetUser} was added to the group by admin.`,
+                        authorUsername: 'System',
+                        isSystem: true
+                    });
+                }
+            } else if (action === 'rename') {
+                convo.name = newName;
+                await convo.save();
+                io.to(conversationId).emit('groupRenamed', { conversationId, newName });
+            }
+        } catch(err) { console.error('Admin action error:', err); }
+    });
+
+    // Start Private Chat
+    socket.on('startPrivateChat', async ({ targetUsername }) => {
+        try {
+            let convo = await Conversation.findOne({
+                isGroup: false,
+                isGlobal: false,
+                participants: { $all: [socket.username, targetUsername], $size: 2 }
+            });
+            if (!convo) {
+                convo = new Conversation({ isGroup: false, participants: [socket.username, targetUsername] });
+                await convo.save();
+            }
+            socket.join(convo._id.toString());
+            io.emit('conversationCreated', convo);
+        } catch(err) {}
+    });
+
+    // Create Group
+    socket.on('createGroup', async ({ name, participants }) => {
+        try {
+            if (!participants.includes(socket.username)) participants.push(socket.username);
+            const convo = new Conversation({ isGroup: true, name, participants, admin: socket.username });
+            await convo.save();
+            socket.join(convo._id.toString());
+            io.emit('conversationCreated', convo);
+        } catch (err) {}
+    });
+
+    // Read Receipts
+    socket.on('markAsRead', async ({ conversationId, messageIds }) => {
+        try {
+            if (!messageIds || messageIds.length === 0) return;
+            await Message.updateMany(
+                { _id: { $in: messageIds }, conversationId },
+                { $addToSet: { readBy: socket.username } }
+            );
+            io.to(conversationId).emit('messagesRead', { conversationId, messageIds, readBy: socket.username });
+        } catch(err) {}
     });
 
     // Listen for incoming chat messages
@@ -258,11 +394,13 @@ io.on('connection', (socket) => {
                 mediaType: data.mediaType || null,
                 authorUsername: socket.username,
                 authorId: socket.id,
-                replyTo: data.replyTo || null
+                replyTo: data.replyTo || null,
+                conversationId: data.conversationId || globalChatId,
+                readBy: [socket.username]
             });
             await newMessage.save();
 
-            io.emit('chatMessage', newMessage);
+            io.to(newMessage.conversationId.toString()).emit('chatMessage', newMessage);
         } catch (err) {
             console.error('Error saving message:', err);
         }
@@ -276,7 +414,7 @@ io.on('connection', (socket) => {
                 msg.text = newText;
                 msg.isEdited = true;
                 await msg.save();
-                io.emit('messageEdited', msg);
+                io.to(msg.conversationId.toString()).emit('messageEdited', msg);
             }
         } catch (err) {
             console.error('Error editing message:', err);
@@ -293,7 +431,7 @@ io.on('connection', (socket) => {
                 msg.mediaUrl = null;
                 msg.mediaType = null;
                 await msg.save();
-                io.emit('messageDeleted', msg);
+                io.to(msg.conversationId.toString()).emit('messageDeleted', msg);
             }
         } catch (err) {
             console.error('Error deleting message:', err);
@@ -310,7 +448,7 @@ io.on('connection', (socket) => {
                     usersReacted.push(socket.username);
                     msg.reactions.set(reaction, usersReacted);
                     await msg.save();
-                    io.emit('messageReactionUpdated', { messageId, reactions: Object.fromEntries(msg.reactions) });
+                    io.to(msg.conversationId.toString()).emit('messageReactionUpdated', { messageId, reactions: Object.fromEntries(msg.reactions) });
                 } else {
                     // Remove reaction if clicked again
                     const newReacts = usersReacted.filter(u => u !== socket.username);
@@ -320,7 +458,7 @@ io.on('connection', (socket) => {
                         msg.reactions.delete(reaction);
                     }
                     await msg.save();
-                    io.emit('messageReactionUpdated', { messageId, reactions: Object.fromEntries(msg.reactions) });
+                    io.to(msg.conversationId.toString()).emit('messageReactionUpdated', { messageId, reactions: Object.fromEntries(msg.reactions) });
                 }
             }
         } catch (err) {
@@ -329,12 +467,12 @@ io.on('connection', (socket) => {
     });
 
     // Handle typing events
-    socket.on('typing', () => {
-        socket.broadcast.emit('userTyping', socket.username); // Send to all EXCEPT sender
+    socket.on('typing', (conversationId) => {
+        socket.to(conversationId).emit('userTyping', { username: socket.username, conversationId });
     });
 
-    socket.on('stopTyping', () => {
-        socket.broadcast.emit('userStoppedTyping', socket.username);
+    socket.on('stopTyping', (conversationId) => {
+        socket.to(conversationId).emit('userStoppedTyping', { username: socket.username, conversationId });
     });
 
     // Handle user disconnect
