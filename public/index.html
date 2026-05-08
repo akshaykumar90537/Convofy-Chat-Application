@@ -23,27 +23,36 @@
                 <p id="auth-subtitle">Login to continue to Convofy.</p>
             </div>
             <form id="join-form">
-                <div class="input-group">
+                <div class="input-group icon-input-group">
+                    <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    <input type="text" id="username-input" placeholder=" " autocomplete="off" required>
                     <label for="username-input">Username</label>
-                    <input type="text" id="username-input" placeholder="Enter username" autocomplete="off" required>
                 </div>
-                <div class="input-group">
+                <div class="input-group icon-input-group">
+                    <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                    <input type="password" id="password-input" placeholder=" " autocomplete="off" required>
                     <label for="password-input">Password</label>
-                    <input type="password" id="password-input" placeholder="Enter password" autocomplete="off" required>
                 </div>
                 
                 <div id="register-fields" style="display: none;">
                     <div class="input-group">
-                        <label for="security-question">Security Question</label>
-                        <select id="security-question" required>
+                        <select id="security-question">
                             <option value="What is your pet name?">What is your pet name?</option>
                             <option value="What is your favorite color?">What is your favorite color?</option>
                             <option value="What is your mother's maiden name?">What is your mother's maiden name?</option>
                         </select>
+                        <label for="security-question" class="static-label">Security Question</label>
                     </div>
-                    <div class="input-group">
+                    <div class="input-group icon-input-group">
+                        <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <input type="text" id="security-answer" placeholder=" " autocomplete="off">
                         <label for="security-answer">Answer</label>
-                        <input type="text" id="security-answer" placeholder="Enter answer" autocomplete="off" required>
                     </div>
                 </div>
 

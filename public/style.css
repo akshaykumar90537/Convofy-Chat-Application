@@ -991,3 +991,106 @@ body.light-mode .dropdown-item:hover { background: rgba(0, 0, 0, 0.05); }
 #emoji-picker-wrapper.hidden { opacity: 0; transform: translateY(10px) scale(0.95); pointer-events: none; display: block !important; }
 emoji-picker { --background: rgba(30, 41, 59, 0.95); --border-color: rgba(255, 255, 255, 0.1); --text-color: #f8fafc; --category-font-color: #94a3b8; backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); }
 body.light-mode emoji-picker { --background: rgba(255, 255, 255, 0.95); --border-color: rgba(0, 0, 0, 0.1); --text-color: #0f172a; --category-font-color: #475569; }
+
+
+/* --- Pro-Level Login Redesign Overrides --- */
+
+
+/* 2. Floating Labels & Input Icons */
+.login-card .input-group {
+    position: relative;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    flex-direction: row;
+}
+
+.login-card .input-icon {
+    position: absolute;
+    left: 16px;
+    width: 20px;
+    height: 20px;
+    color: var(--text-muted);
+    pointer-events: none;
+    transition: color 0.3s ease;
+    z-index: 2;
+}
+
+.login-card .input-group input, 
+.login-card .input-group select {
+    width: 100%;
+    padding: 16px 16px 16px 48px;
+    background: rgba(15, 23, 42, 0.4);
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    color: var(--text-main);
+    font-size: 1rem;
+    outline: none;
+    transition: all 0.3s ease;
+    text-align: left;
+}
+body.light-mode .login-card .input-group input,
+body.light-mode .login-card .input-group select {
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.login-card .input-group label {
+    position: absolute;
+    left: 48px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    font-size: 1rem;
+    font-weight: 500;
+    pointer-events: none;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    padding: 0 4px;
+    z-index: 2;
+    margin-bottom: 0;
+}
+
+.login-card .input-group input:focus ~ label,
+.login-card .input-group input:not(:placeholder-shown) ~ label,
+.login-card .input-group select:focus ~ label,
+.login-card .input-group select:valid ~ label.static-label {
+    top: 0;
+    left: 14px;
+    transform: translateY(-50%) scale(0.85);
+    color: var(--primary);
+    background: #0f172a;
+    border-radius: 4px;
+}
+body.light-mode .login-card .input-group input:focus ~ label,
+body.light-mode .login-card .input-group input:not(:placeholder-shown) ~ label,
+body.light-mode .login-card .input-group select:focus ~ label,
+body.light-mode .login-card .input-group select:valid ~ label.static-label {
+    background: #f8fafc;
+}
+
+.login-card .input-group input:not(:focus):not(:placeholder-shown) ~ label,
+.login-card .input-group select:not(:focus):valid ~ label.static-label {
+    color: var(--text-muted);
+}
+
+.login-card .input-group input:focus, 
+.login-card .input-group select:focus {
+    border-color: var(--primary);
+    background: rgba(15, 23, 42, 0.6);
+    box-shadow: 0 0 15px var(--primary-glow);
+}
+body.light-mode .login-card .input-group input:focus, 
+body.light-mode .login-card .input-group select:focus {
+    background: rgba(255, 255, 255, 0.8);
+}
+
+.login-card .input-group input:focus ~ .input-icon, 
+.login-card .input-group select:focus ~ .input-icon {
+    color: var(--primary);
+}
+
+#security-question {
+    padding-left: 16px !important;
+}
+#security-question ~ label {
+    left: 16px;
+}

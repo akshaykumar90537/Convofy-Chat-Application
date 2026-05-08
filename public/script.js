@@ -7,7 +7,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Entrance Animation
     if (document.querySelector('.login-card')) {
         gsap.to(".login-card", {
+            scale: 1,
+            x: 0,
             y: 0,
+            xPercent: -50,
+            yPercent: -50,
             opacity: 1,
             duration: 1,
             ease: "power3.out",
@@ -44,6 +48,8 @@ document.addEventListener('DOMContentLoaded', () => {
             ease: "sine.inOut"
         });
     }
+
+
 });
 
 // UI Elements
@@ -87,6 +93,10 @@ authToggleBtn.addEventListener('click', () => {
     gsap.to(".login-card", {
         scale: 0.95,
         opacity: 0.5,
+        x: 0,
+        y: 0,
+        xPercent: -50,
+        yPercent: -50,
         duration: 0.2,
         yoyo: true,
         repeat: 1,
@@ -113,6 +123,16 @@ authToggleBtn.addEventListener('click', () => {
                 document.querySelector('.forgot-pwd-wrapper').style.display = 'none';
             }
             authError.classList.add('hidden');
+            
+            // Smooth stagger animation for fields
+            gsap.fromTo(".input-group", 
+                { y: 15, opacity: 0 }, 
+                { y: 0, opacity: 1, duration: 0.3, stagger: 0.05, ease: "power2.out" }
+            );
+            gsap.fromTo(".submit-btn", 
+                { y: 15, opacity: 0 }, 
+                { y: 0, opacity: 1, duration: 0.3, delay: 0.1, ease: "power2.out" }
+            );
         }
     });
 });
@@ -276,7 +296,7 @@ joinForm.addEventListener('submit', async (e) => {
         }
 
         currentUsername = data.username;
-        localStorage.setItem('auth_token', data.token);
+        sessionStorage.setItem('auth_token', data.token);
         authError.classList.add('hidden');
         
         transitionToChat();
@@ -323,8 +343,13 @@ function transitionToChat() {
 }
 
 function verifyTokenOnLoad() {
-    const token = localStorage.getItem('auth_token');
-    if (!token) return;
+    const token = sessionStorage.getItem('auth_token');
+    if (!token) {
+        // If no token in this tab, ask other open tabs for it
+        localStorage.setItem('getSessionStorage', Date.now().toString());
+        localStorage.removeItem('getSessionStorage');
+        return;
+    }
 
     fetch('/api/verify', {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -335,14 +360,30 @@ function verifyTokenOnLoad() {
             currentUsername = data.username;
             transitionToChat();
         } else {
-            localStorage.removeItem('auth_token');
+            sessionStorage.removeItem('auth_token');
         }
     })
     .catch(err => {
         console.error('Verification error:', err);
-        localStorage.removeItem('auth_token');
+        sessionStorage.removeItem('auth_token');
     });
 }
+
+// Session Storage Synchronization across tabs
+window.addEventListener('storage', (event) => {
+    // Another tab is asking for the token
+    if (event.key === 'getSessionStorage' && sessionStorage.getItem('auth_token')) {
+        localStorage.setItem('sessionStorageTransfer', sessionStorage.getItem('auth_token'));
+        localStorage.removeItem('sessionStorageTransfer');
+    }
+    // We received the token from another tab
+    if (event.key === 'sessionStorageTransfer' && event.newValue) {
+        if (!sessionStorage.getItem('auth_token')) {
+            sessionStorage.setItem('auth_token', event.newValue);
+            verifyTokenOnLoad();
+        }
+    }
+});
 
 // Check auth token on startup
 document.addEventListener('DOMContentLoaded', verifyTokenOnLoad);
@@ -350,7 +391,7 @@ document.addEventListener('DOMContentLoaded', verifyTokenOnLoad);
 const logoutBtn = document.getElementById('logout-btn');
 if (logoutBtn) {
     logoutBtn.addEventListener('click', () => {
-        localStorage.removeItem('auth_token');
+        sessionStorage.removeItem('auth_token');
         window.location.reload();
     });
 }
