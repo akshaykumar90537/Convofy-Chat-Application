@@ -9,7 +9,6 @@ Convofy is a premium, real-time public chat application built with a focus on hi
 ![Login Page](./assets/login-screenshot.png) 
 ![Chat Interface](./assets/chat-screenshot.png) 
 -->
-
 ## ✨ Key Features
 
 - **Real-Time Messaging**: Lightning-fast, real-time chat powered by WebSockets (Socket.io).
@@ -107,3 +106,7 @@ Contributions, issues, and feature requests are welcome! Feel free to check the 
 
 ## 📝 License
 This project is open-source and available under the MIT License.
+
+
+## Author
+Akshay Kumar
