@@ -56,7 +56,7 @@ async function initGlobalChat() {
 }
 
 // Connect to MongoDB
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/convofy';
+const MONGO_URI = process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/convofy';
 mongoose.connect(MONGO_URI)
     .then(async () => {
         console.log('Connected to MongoDB');
