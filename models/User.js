@@ -21,6 +21,10 @@ const userSchema = new mongoose.Schema({
     securityAnswer: {
         type: String,
         required: true
+    },
+    globalChatJoinedAt: {
+        type: Date,
+        default: Date.now
     }
 }, { timestamps: true });
 

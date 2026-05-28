@@ -77,6 +77,7 @@ const inputContextText = document.getElementById('input-context-text');
 const cancelContextBtn = document.getElementById('cancel-context-btn');
 
 let isLoginMode = true;
+let isGuestMode = false;
 
 // Context States
 let replyingToId = null;
@@ -334,12 +335,62 @@ function transitionToChat() {
                 { opacity: 0, y: 20 },
                 { opacity: 1, y: 0, duration: 0.6, ease: "power3.out", onStart: () => { mainLayout.classList.add('active'); } }
             );
+
+            // Apply guest mode restrictions after layout is visible
+            if (isGuestMode) {
+                applyGuestRestrictions();
+            }
         }
     });
 
     displayUsername.textContent = currentUsername;
     socket.emit('joinChat', currentUsername);
     loadData();
+}
+
+// ==========================================
+// Guest Mode Logic
+// ==========================================
+const guestJoinBtn = document.getElementById('guest-join-btn');
+
+if (guestJoinBtn) {
+    guestJoinBtn.addEventListener('click', () => {
+        // Generate unique guest username
+        currentUsername = 'Guest_' + Math.floor(1000 + Math.random() * 9000);
+        isGuestMode = true;
+
+        // No token stored for guests
+        transitionToChat();
+    });
+}
+
+function applyGuestRestrictions() {
+    // Add guest-mode class to body for CSS-driven hiding
+    document.body.classList.add('guest-mode');
+
+    // Show guest info banner
+    const guestBanner = document.getElementById('guest-mode-banner');
+    if (guestBanner) guestBanner.classList.remove('hidden');
+
+    // Hide media attachment & mic buttons (text only for guests)
+    if (attachmentBtn) attachmentBtn.style.display = 'none';
+    if (micBtn) micBtn.style.display = 'none';
+
+    // Hide create group button
+    if (showCreateGroupBtn) showCreateGroupBtn.style.display = 'none';
+
+    // Change the chat title to indicate global chat
+    if (chatTitle) chatTitle.textContent = 'Convofy Global';
+
+    // Wire up the "Create an account" link inside the guest banner
+    const registerPrompt = document.getElementById('guest-register-prompt');
+    if (registerPrompt) {
+        registerPrompt.addEventListener('click', () => {
+            // Disconnect guest and reload to login screen
+            socket.disconnect();
+            window.location.reload();
+        });
+    }
 }
 
 function verifyTokenOnLoad() {
@@ -616,6 +667,12 @@ async function loadData() {
         allUsers = users.map(u => u.username);
         
         allConversations = await convosRes.json();
+
+        // For guests, only show the Global Chat conversation
+        if (isGuestMode) {
+            allConversations = allConversations.filter(c => c.isGlobal);
+        }
+
         renderConversations();
         
         if(allConversations.length > 0 && !currentConversationId) {
@@ -688,7 +745,7 @@ window.switchConversation = async (id) => {
     }
 
     try {
-        const res = await fetch(`/api/messages/${id}`);
+        const res = await fetch(`/api/messages/${id}?username=${encodeURIComponent(currentUsername)}`);
         const messages = await res.json();
         messages.forEach(renderMessage);
         scrollToBottom();
@@ -1004,6 +1061,11 @@ socket.on('messageReactionUpdated', (data) => {
         }
         reactContainer.innerHTML = reactHtml;
     }
+});
+
+// Handle Guest Restriction Alerts from Server
+socket.on('guestRestricted', (data) => {
+    alert(data.message || 'This feature is not available in Guest Mode.');
 });
 
 // Handle Status Messages (Join/Leave)

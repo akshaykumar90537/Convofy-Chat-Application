@@ -96,7 +96,26 @@ app.get('/api/conversations/:username', async (req, res) => {
 
 app.get('/api/messages/:conversationId', async (req, res) => {
     try {
-        const messages = await Message.find({ conversationId: req.params.conversationId }).sort({ createdAt: 1 });
+        const { username } = req.query;
+        let query = { conversationId: req.params.conversationId };
+
+        // For global chat, only show messages after the user joined
+        if (username) {
+            const convo = await Conversation.findById(req.params.conversationId);
+            if (convo && convo.isGlobal) {
+                // Guest users don't have a DB record - show no previous messages
+                if (username.startsWith('Guest_')) {
+                    query.createdAt = { $gte: new Date() };
+                } else {
+                    const user = await User.findOne({ username });
+                    if (user && user.globalChatJoinedAt) {
+                        query.createdAt = { $gte: user.globalChatJoinedAt };
+                    }
+                }
+            }
+        }
+
+        const messages = await Message.find(query).sort({ createdAt: 1 });
         res.json(messages);
     } catch(err) { res.status(500).json({error: 'Server error'}); }
 });
@@ -258,6 +277,14 @@ app.post('/api/upload', upload.single('media'), (req, res) => {
     if (!req.file) {
         return res.status(400).json({ error: 'No file uploaded' });
     }
+
+    // Block guests from uploading media
+    const guestHeader = req.headers['x-guest-mode'];
+    if (guestHeader === 'true') {
+        // Delete the uploaded file
+        fs.unlinkSync(req.file.path);
+        return res.status(403).json({ error: 'Guests cannot upload media. Register for full access!' });
+    }
     
     // Determine type based on mimetype
     const mime = req.file.mimetype;
@@ -304,6 +331,10 @@ io.on('connection', (socket) => {
 
     // Admin Actions
     socket.on('adminAction', async ({ action, conversationId, targetUser, newName }) => {
+        // Block guests from admin actions
+        if (socket.username.startsWith('Guest_')) {
+            return socket.emit('guestRestricted', { message: 'Guests cannot perform admin actions.' });
+        }
         try {
             const convo = await Conversation.findById(conversationId);
             if (!convo || convo.admin !== socket.username) return;
@@ -342,6 +373,10 @@ io.on('connection', (socket) => {
 
     // Start Private Chat
     socket.on('startPrivateChat', async ({ targetUsername }) => {
+        // Block guests from starting private chats
+        if (socket.username.startsWith('Guest_')) {
+            return socket.emit('guestRestricted', { message: 'Guests cannot start private chats. Create an account for full access!' });
+        }
         try {
             let convo = await Conversation.findOne({
                 isGroup: false,
@@ -359,6 +394,10 @@ io.on('connection', (socket) => {
 
     // Create Group
     socket.on('createGroup', async ({ name, participants }) => {
+        // Block guests from creating groups
+        if (socket.username.startsWith('Guest_')) {
+            return socket.emit('guestRestricted', { message: 'Guests cannot create groups. Create an account for full access!' });
+        }
         try {
             if (!participants.includes(socket.username)) participants.push(socket.username);
             const convo = new Conversation({ isGroup: true, name, participants, admin: socket.username });
