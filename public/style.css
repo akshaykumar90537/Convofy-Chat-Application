@@ -1094,3 +1094,152 @@ body.light-mode .login-card .input-group select:focus {
 #security-question ~ label {
     left: 16px;
 }
+
+/* ==========================================
+   Guest Mode Styles
+   ========================================== */
+
+/* --- Divider "or" between Login & Guest --- */
+.guest-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 20px 0 16px;
+}
+.guest-divider-line {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(148, 163, 184, 0.3), transparent);
+}
+.guest-divider-text {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* --- Guest Join Button --- */
+.guest-btn {
+    width: 100%;
+    padding: 13px 20px;
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    border-radius: 12px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    font-family: 'Inter', sans-serif;
+}
+
+.guest-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 12px;
+    padding: 1px;
+    background: linear-gradient(135deg, #6366f1, #ec4899, #f59e0b);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0;
+    transition: opacity 0.35s ease;
+}
+
+.guest-btn:hover {
+    color: var(--text-main);
+    border-color: transparent;
+    background: rgba(99, 102, 241, 0.08);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 20px rgba(99, 102, 241, 0.15);
+}
+
+.guest-btn:hover::before {
+    opacity: 1;
+}
+
+.guest-btn:active {
+    transform: translateY(0);
+}
+
+.guest-btn svg {
+    opacity: 0.7;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.guest-btn:hover svg {
+    opacity: 1;
+    transform: rotate(15deg);
+}
+
+/* --- Guest Mode Banner (inside chat) --- */
+.guest-mode-banner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 20px;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(236, 72, 153, 0.08));
+    border-bottom: 1px solid rgba(99, 102, 241, 0.15);
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    animation: guestBannerSlide 0.4s ease forwards;
+}
+.guest-mode-banner.hidden { display: none !important; }
+
+@keyframes guestBannerSlide {
+    from { opacity: 0; transform: translateY(-100%); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.guest-banner-icon {
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+
+.guest-banner-text {
+    line-height: 1.4;
+}
+.guest-banner-text strong {
+    color: var(--text-main);
+}
+
+.guest-register-link {
+    background: none;
+    border: none;
+    color: #a78bfa;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: inherit;
+    font-family: inherit;
+    padding: 0;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    transition: color 0.2s ease;
+}
+.guest-register-link:hover {
+    color: #c4b5fd;
+}
+
+/* --- Guest Mode: Hide sidebar features --- */
+body.guest-mode .sidebar { display: none; }
+body.guest-mode #chat-interface { border-radius: 24px; }
+body.guest-mode #group-admin-btn { display: none !important; }
+
+/* Light mode overrides for guest styles */
+body.light-mode .guest-btn {
+    border-color: rgba(71, 85, 105, 0.2);
+}
+body.light-mode .guest-btn:hover {
+    background: rgba(99, 102, 241, 0.06);
+}
+body.light-mode .guest-mode-banner {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(236, 72, 153, 0.05));
+    border-bottom-color: rgba(99, 102, 241, 0.1);
+}
